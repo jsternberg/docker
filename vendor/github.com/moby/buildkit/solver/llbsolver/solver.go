@@ -22,6 +22,7 @@ import (
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/frontend"
+	"github.com/moby/buildkit/frontend/attestations"
 	"github.com/moby/buildkit/frontend/gateway"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
@@ -38,8 +39,6 @@ import (
 	"github.com/moby/buildkit/worker"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -158,14 +157,9 @@ func (s *Solver) Bridge(b solver.Builder) frontend.FrontendLLBBridge {
 }
 
 func (s *Solver) recordBuildHistory(ctx context.Context, id string, req frontend.SolveRequest, exp ExporterRequest, j *solver.Job, usage *resources.SysSampler) (func(*Result, []exporter.DescriptorReference, error) error, error) {
-	var stopTrace func() []tracetest.SpanStub
-
-	if s := trace.SpanFromContext(ctx); s.SpanContext().IsValid() {
-		if exp, _, err := detect.Exporter(); err == nil {
-			if rec, ok := exp.(*detect.TraceRecorder); ok {
-				stopTrace = rec.Record(s.SpanContext().TraceID())
-			}
-		}
+	stopTrace, err := detect.Recorder.Record(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	st := time.Now()
@@ -215,6 +209,15 @@ func (s *Solver) recordBuildHistory(ctx context.Context, id string, req frontend
 		attrs := map[string]string{
 			"mode":          "max",
 			"capture-usage": "true",
+		}
+
+		// infer builder-id from user input if available
+		if attests, err := attestations.Parse(rec.FrontendAttrs); err == nil {
+			if prvAttrs, ok := attests["provenance"]; ok {
+				if builderID, ok := prvAttrs["builder-id"]; ok {
+					attrs["builder-id"] = builderID
+				}
+			}
 		}
 
 		makeProvenance := func(res solver.ResultProxy, cap *provenance.Capture) (*controlapi.Descriptor, func(), error) {

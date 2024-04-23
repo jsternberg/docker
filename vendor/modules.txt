@@ -710,7 +710,7 @@ github.com/mitchellh/hashstructure/v2
 # github.com/mitchellh/reflectwalk v1.0.2
 ## explicit
 github.com/mitchellh/reflectwalk
-# github.com/moby/buildkit v0.13.1
+# github.com/moby/buildkit v0.13.0-rc3.0.20240511035917-4f2ebdd994db
 ## explicit; go 1.21
 github.com/moby/buildkit/api/services/control
 github.com/moby/buildkit/api/types
@@ -757,6 +757,7 @@ github.com/moby/buildkit/frontend/dockerfile/builder
 github.com/moby/buildkit/frontend/dockerfile/command
 github.com/moby/buildkit/frontend/dockerfile/dockerfile2llb
 github.com/moby/buildkit/frontend/dockerfile/instructions
+github.com/moby/buildkit/frontend/dockerfile/linter
 github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
 github.com/moby/buildkit/frontend/dockerui
@@ -767,6 +768,7 @@ github.com/moby/buildkit/frontend/gateway/forwarder
 github.com/moby/buildkit/frontend/gateway/grpcclient
 github.com/moby/buildkit/frontend/gateway/pb
 github.com/moby/buildkit/frontend/subrequests
+github.com/moby/buildkit/frontend/subrequests/lint
 github.com/moby/buildkit/frontend/subrequests/outline
 github.com/moby/buildkit/frontend/subrequests/targets
 github.com/moby/buildkit/identity
@@ -1087,12 +1089,12 @@ github.com/syndtr/gocapability/capability
 # github.com/tinylib/msgp v1.1.8
 ## explicit; go 1.15
 github.com/tinylib/msgp/msgp
-# github.com/tonistiigi/fsutil v0.0.0-20240301111122-7525a1af2bb5
+# github.com/tonistiigi/fsutil v0.0.0-20240424095704-91a3fc46842c
 ## explicit; go 1.20
 github.com/tonistiigi/fsutil
 github.com/tonistiigi/fsutil/copy
 github.com/tonistiigi/fsutil/types
-# github.com/tonistiigi/go-actions-cache v0.0.0-20240227172821-a0b64f338598
+# github.com/tonistiigi/go-actions-cache v0.0.0-20240320205438-9794bdbb2fb4
 ## explicit; go 1.20
 github.com/tonistiigi/go-actions-cache
 # github.com/tonistiigi/go-archvariant v1.0.0
@@ -1246,9 +1248,6 @@ go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/envconfig
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/retry
-# go.opentelemetry.io/otel/exporters/prometheus v0.42.0
-## explicit; go 1.20
-go.opentelemetry.io/otel/exporters/prometheus
 # go.opentelemetry.io/otel/metric v1.21.0
 ## explicit; go 1.20
 go.opentelemetry.io/otel/metric

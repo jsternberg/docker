@@ -374,7 +374,7 @@ func (cm *cacheManager) get(ctx context.Context, id string, pg progress.Controll
 		if rec.equalImmutable != nil {
 			return rec.equalImmutable.ref(triggerUpdate, descHandlers, pg), nil
 		}
-		return rec.mref(triggerUpdate, descHandlers).commit(ctx)
+		return rec.mref(triggerUpdate, descHandlers).commit()
 	}
 
 	return rec.ref(triggerUpdate, descHandlers, pg), nil
@@ -1109,10 +1109,11 @@ func (cm *cacheManager) prune(ctx context.Context, ch chan client.UsageInfo, opt
 			}
 
 			c := &client.UsageInfo{
-				ID:         cr.ID(),
-				Mutable:    cr.mutable,
-				RecordType: recordType,
-				Shared:     shared,
+				ID:          cr.ID(),
+				Mutable:     cr.mutable,
+				RecordType:  recordType,
+				Shared:      shared,
+				Description: cr.GetDescription(),
 			}
 
 			usageCount, lastUsedAt := cr.getLastUsed()
