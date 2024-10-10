@@ -11,9 +11,29 @@ import (
 
 // BuilderGCRule represents a GC rule for buildkit cache
 type BuilderGCRule struct {
-	All         bool            `json:",omitempty"`
-	Filter      BuilderGCFilter `json:",omitempty"`
-	KeepStorage string          `json:",omitempty"`
+	All           bool            `json:",omitempty"`
+	Filter        BuilderGCFilter `json:",omitempty"`
+	ReservedSpace string          `json:",omitempty"`
+	MaxUsedSpace  string          `json:",omitempty"`
+	MinFreeSpace  string          `json:",omitempty"`
+}
+
+func (x *BuilderGCRule) UnmarshalJSON(data []byte) error {
+	var v struct {
+		BuilderGCRule
+
+		// Deprecated option is now equivalent to ReservedSpace.
+		KeepStorage string `json:",omitempty"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	if v.KeepStorage != "" && v.ReservedSpace == "" {
+		v.ReservedSpace = v.KeepStorage
+	}
+	*x = v.BuilderGCRule
+	return nil
 }
 
 // BuilderGCFilter contains garbage-collection filter rules for a BuildKit builder
