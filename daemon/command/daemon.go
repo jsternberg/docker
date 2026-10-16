@@ -884,6 +884,9 @@ func initMiddlewares(_ context.Context, s *apiserver.Server, cfg *config.Config,
 	}
 	s.UseMiddleware(*vm)
 
+	metricsMiddleware := middleware.NewMetricsMiddleware()
+	s.UseMiddleware(metricsMiddleware)
+
 	authzMiddleware := authorization.NewMiddleware(cfg.AuthorizationPlugins, pluginStore)
 	s.UseMiddleware(authzMiddleware)
 	return authzMiddleware, nil

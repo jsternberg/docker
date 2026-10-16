@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/containerd/log"
 	"github.com/gorilla/mux"
@@ -71,6 +72,10 @@ func (s *Server) makeHTTPHandler(route router.Route) http.HandlerFunc {
 		vars := mux.Vars(r)
 		if vars == nil {
 			vars = make(map[string]string)
+		}
+
+		if path := route.Path(); path != "" && !strings.HasPrefix(path, "/_") {
+			vars["route"] = path
 		}
 
 		if err := handlerFunc(ctx, w, r, vars); err != nil {
