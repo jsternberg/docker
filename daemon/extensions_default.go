@@ -22,6 +22,7 @@ import (
 	jobspb "github.com/moby/moby/v2/extpoints/jobs/api/v0/protogen"
 	servicenamegeneratorpb "github.com/moby/moby/v2/extpoints/servicenamegenerator/v0/protogen"
 	storagepb "github.com/moby/moby/v2/extpoints/storage/kv/v0/protogen"
+	telemetry "github.com/moby/moby/v2/extpoints/telemetry/v0"
 	namesgeneratorlegacy "github.com/moby/moby/v2/internal/namesgenerator/legacy"
 )
 
@@ -92,6 +93,7 @@ func clientProviders() []clientpoint.Registration {
 	return []clientpoint.Registration{
 		containernamegeneratorpb.ClientPoint,
 		servicenamegeneratorpb.ClientPoint,
+		telemetry.ClientPoint,
 	}
 }
 

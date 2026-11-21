@@ -63,6 +63,7 @@ import (
 	"github.com/spf13/pflag"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"tags.cncf.io/container-device-interface/pkg/cdi"
 )
 
@@ -272,7 +273,7 @@ func (cli *daemonCLI) start(ctx context.Context) (retErr error) {
 	// Initialize the trace recorder for buildkit.
 	detect.Recorder = detect.NewTraceRecorder()
 
-	tp, otelShutdown := otelutil.NewTracerProvider(ctx, true)
+	tp := otelutil.NewTracerProvider(ctx, true)
 	otel.SetTracerProvider(tp)
 	log.G(ctx).Logger.AddHook(logotel.NewLogrusHook())
 
@@ -305,6 +306,9 @@ func (cli *daemonCLI) start(ctx context.Context) (retErr error) {
 	}
 
 	d.StoreHosts(hosts)
+
+	// Register OTEL forwarders for the telemetry extension.
+	d.RegisterTraceSpanForwarders(ctx, tp)
 
 	// validate after NewDaemon has restored enabled plugins. Don't change order.
 	if err := validateAuthzPlugins(cli.Config.AuthorizationPlugins, pluginStore); err != nil {
@@ -416,6 +420,9 @@ func (cli *daemonCLI) start(ctx context.Context) (retErr error) {
 
 	// notify systemd that we're shutting down
 	notifyStopping()
+
+	// start telemetry shutdown so we flush existing telemetry before shutting down the daemon
+	finishOtelShutdown := startTelemetryShutdown(ctx, tp)
 	shutdownDaemon(ctx, d)
 
 	// shutdown / close BuildKit backend
@@ -425,12 +432,8 @@ func (cli *daemonCLI) start(ctx context.Context) (retErr error) {
 	// containerd to stop.
 	shutdownContainerd()
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
-	defer shutdownCancel()
-
-	if err := otelShutdown(shutdownCtx); err != nil {
-		log.G(ctx).WithError(err).Error("failed to shutdown OTEL tracing")
-	}
+	// finish shutting down telemetry.
+	finishOtelShutdown()
 
 	if err, ok := <-errAPI; ok {
 		return errors.Wrap(err, "shutting down due to ServeAPI error")
@@ -1262,4 +1265,38 @@ func cdiEnabled(conf *config.Config) bool {
 		return true
 	}
 	return val
+}
+
+// startTelemetryShutdown starts the process of shutting down telemetry. It will attempt to flush
+// the current telemetry before returning. If it succeeds, then it will return a shutdown
+// function that will finish the process that can be called at the end of the shutdown process.
+func startTelemetryShutdown(ctx context.Context, tp *sdktrace.TracerProvider) (shutdown func()) {
+	// Set a shutdown timeout for this. This timeout is shared between the flush and the shutdown.
+	// It is paused during the intermediary time so the shutdown for other portions doesn't affect
+	// this timeout.
+	const shutdownTimeout = 10 * time.Second
+	parentCtx := context.WithoutCancel(ctx)
+
+	start := time.Now()
+	shutdownCtx, shutdownCancel := context.WithDeadline(parentCtx, start.Add(shutdownTimeout))
+	defer shutdownCancel()
+
+	if err := tp.ForceFlush(shutdownCtx); err != nil {
+		log.G(shutdownCtx).WithError(err).Error("failed to flush OTEL tracing during shutdown")
+	}
+	remaining := max(shutdownTimeout-time.Since(start), 0)
+
+	return func() {
+		if remaining <= 0 {
+			log.G(shutdownCtx).Error("not attempting to shutdown OTEL tracing due to earlier failure")
+			return
+		}
+
+		shutdownCtx, shutdownCancel := context.WithTimeout(parentCtx, remaining)
+		defer shutdownCancel()
+
+		if err := tp.Shutdown(shutdownCtx); err != nil {
+			log.G(shutdownCtx).WithError(err).Error("failed to shutdown OTEL tracing")
+		}
+	}
 }
